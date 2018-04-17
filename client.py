@@ -2,7 +2,7 @@ import requests
 import json
 import cv2
 
-addr = 'http://localhost:5000'
+addr = 'http://192.168.1.108:5000'
 process_url = addr + '/api/process'
 
 # header for http request
@@ -22,6 +22,7 @@ stranger_flag = False
 def frame_transfer():
     # initialize camera
     cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FPS, 15)
 
     print("hello")
 
@@ -36,7 +37,7 @@ def frame_transfer():
         # send http request with frame and receive response
         response = requests.post(process_url, data=frame_data.tostring(), headers=headers)
         # decode response
-        json_data = json.loads(response)
+        json_data = json.loads(response.text)
 
         # for debug
         print(json_data)
