@@ -1,15 +1,20 @@
 import json
 import logging
+import os
 import pickle
 import sys
+import time
 
 import face_recognition
 import numpy as np
-from flask import Flask, Response, request
+from flask import Flask, Response, request, render_template
 from imutils import paths
 from imutils.object_detection import non_max_suppression
 
 import cv2
+
+# define default video directory
+video_temp = './tmp/'
 
 # initialize the HOG descriptor/person detector
 hog = cv2.HOGDescriptor()
@@ -21,18 +26,23 @@ app = Flask(__name__)
 # route http posts to this method
 @app.route('/api/process', methods=['POST'])
 def frame_process():
+
     r = request
+    frame_count = 0
 
     # convert string of image data to uint8
     nparr = np.fromstring(r.data, np.uint8)
     # decode image
     receive_frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    """
-    # do some fancy processing here....
-    
-    """
-
+    # save the file to temp folder
+    ct = time.time()
+    # local_time = time.localtime(ct)
+    data_head = time.strftime("%Y-%m-%d %H:%M:%S")
+    data_secs = (ct - int(ct)) * 1000
+    time_stamp = "%s.%03d" % (data_head, data_secs)
+    cv2.imwrite(os.path.join(video_temp, time_stamp) + '.jpg', receive_frame)
+    frame_count += 1
     # build a response dict to send back to client
     #response = {'if_stranger': False, 'if_owner':False, 'if_out':False}
     response = {'message': 'image received. size={}x{}'.format(receive_frame.shape[1], receive_frame.shape[0])}
@@ -71,6 +81,10 @@ def identify_face(input_frame, known_faces):
                 logging.info('find %s' %(list(known_faces.keys())[i]))
     
     return detected_faces
+
+@app.route('/stream')
+def video_streaming_page():
+    return render_template('stream.html')
 
 # start flask app
 app.run(host="0.0.0.0", port=5000)
