@@ -16,6 +16,9 @@ import cv2
 # define default video directory
 video_temp = './tmp/'
 
+# status recorder of the platform
+
+
 # initialize the HOG descriptor/person detector
 hog = cv2.HOGDescriptor()
 hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())

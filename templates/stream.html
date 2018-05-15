@@ -14,7 +14,21 @@
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
             <a class="navbar-brand" href="#">Camera Stream</a>
         </nav>
-        <img src="http://127.0.0.1:7777/api/streaming" />
+        <div class="container">
+
+            <div class="starter-template">
+              <h1>Bootstrap starter template</h1>
+              <img src="http://127.0.0.1:7777/api/streaming" /><br>
+
+              <div class="btn-group" role="group" aria-label="Basic example">
+                <button type="button" class="btn btn-secondary">Up</button>
+                <button type="button" class="btn btn-secondary">Down</button>
+                <button type="button" class="btn btn-secondary">Left</button>
+                <button type="button" class="btn btn-secondary">Right</button>
+              </div>
+            </div>
+      
+          </div><!-- /.container -->
         <script src="{{ url_for('static', filename='jquery-3.3.1.min.js')  }}"></script>
         <script src="{{ url_for('static', filename='bootstrap.min.js')  }}"></script>
     </body>
