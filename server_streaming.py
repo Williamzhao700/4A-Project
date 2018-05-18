@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import sqlite3
 import sys
 import time
 
@@ -12,6 +13,7 @@ import cv2
 
 # define default video directory
 video_temp = './tmp/'
+db_filename = 'data.db'
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -37,7 +39,20 @@ def video_gen():
 @app.route('/api/streaming')
 def get_video_streaming():
     # waiting to set up initialize queue
+    token = request.args.get('token', '')
+
+    if not token:
+        return Response(response="Missing token!", status=400)
     
+    conn = sqlite3.connect(db_filename)
+    c = conn.cursor()
+    cursor = c.execute('SELECT id FROM users WHERE token = ?', (token,))
+    token_valid = bool(cursor.fetchall())
+    conn.close()
+    
+    if not token_valid:
+        return Response(response="Invalid token!!!", status=400)
+
     # clear cache
     all_files = sorted(os.listdir(video_temp))
     for file in all_files:

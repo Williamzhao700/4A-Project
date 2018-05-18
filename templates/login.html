@@ -1,0 +1,50 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="renderer" content="webkit">
+
+    <title>Signin Template for Bootstrap</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="{{ url_for('static', filename='login.css') }}" rel="stylesheet">
+  </head>
+
+  <body class="text-center">
+    <form class="form-signin">
+      <img class="mb-4" src="https://getbootstrap.com/assets/brand/bootstrap-solid.svg" alt="" width="72" height="72">
+      <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
+      <label for="input_name" class="sr-only">User Name</label>
+      <input type="text" id="input_username" class="form-control" placeholder="User name" required autofocus>
+      <label for="inputPassword" class="sr-only">Password</label>
+      <input type="password" id="input_password" class="form-control" placeholder="Password" required>
+      
+      <button class="btn btn-lg btn-primary btn-block" type="submit" id ="loginButton">Sign in</button>
+      <p class="mt-5 mb-3 text-muted">&copy; 2018</p>
+    </form>
+
+    <script src="{{ url_for('static', filename='jquery-3.3.1.min.js')  }}"></script>
+    <script src="{{ url_for('static', filename='bootstrap.min.js')  }}"></script>
+    <script>
+        $('#loginButton').click(function () {
+            var username = $('#input_username').val();
+            var password = $('#input_password').val();
+            $.post('/api/login', { 'username': username, 'password': password}, function (data) {
+                if (data.status)
+                  location = "/stream";
+                else
+                  alert('Login failed!');
+            }).fail(function () {
+                alert('Request failed!');
+            });
+        });
+
+    </script> 
+  </body>
+</html>

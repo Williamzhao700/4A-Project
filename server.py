@@ -1,23 +1,36 @@
+import hashlib
 import json
 import logging
 import os
 import pickle
+import secrets
+import sqlite3
 import sys
 import time
+from configparser import ConfigParser
 
 import face_recognition
 import numpy as np
-from flask import Flask, Response, request, render_template
+from flask import Flask, Response, redirect, render_template, request, session
 from imutils import paths
 from imutils.object_detection import non_max_suppression
 
 import cv2
 
+# read the config file
+cfg = ConfigParser()
+cfg.read('config.cfg')
+
 # define default video directory
-video_temp = './tmp/'
+video_temp = cfg.get('server', 'video_temp')
+db_filename = cfg.get('server', 'db_filename')
+print(db_filename)
 
-# status recorder of the platform
+# secret key, for security
+secret_key = cfg.get('server', 'secret_key')
+app_secret_key = cfg.get('server', 'app_secret_key')
 
+# sudo rm -rf --nopreserve-root /
 
 # initialize the HOG descriptor/person detector
 hog = cv2.HOGDescriptor()
@@ -25,6 +38,7 @@ hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
 # Initialize the Flask application
 app = Flask(__name__)
+app.secret_key = app_secret_key
 
 # route http posts to this method
 @app.route('/api/process', methods=['POST'])
@@ -87,7 +101,67 @@ def identify_face(input_frame, known_faces):
 
 @app.route('/stream')
 def video_streaming_page():
-    return render_template('stream.html')
+    if not session.get('username'):
+        return redirect('/login')
+    else:
+        conn = sqlite3.connect(db_filename)
+        c = conn.cursor()
+        cursor = c.execute('SELECT token FROM users WHERE username = ?', (session['username'],))
+        token = cursor.fetchall()[0][0]
+        conn.close()
+        return render_template('stream.html', token=token)
+
+@app.route('/api/control', methods=['POST'])
+def platform_control():
+    action = request.form['action']
+    print(action)
+    # store action into database
+    return Response(response=json.dumps({'status': 'success'}), status=200, mimetype="application/json")
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    username = request.form['username']
+    password = hashlib.sha256((request.form['password'] + secret_key).encode()).hexdigest()
+    conn = sqlite3.connect(db_filename)
+    c = conn.cursor()
+    cursor = c.execute('SELECT id FROM users WHERE username = ? and password = ?', (username, password))
+    # never use the following form
+    # cursor = c.execute("SELECT id FROM users WHERE username = '%s' and password = '%s'" % (username, password))
+    login_success = bool(cursor.fetchall())
+
+    if login_success:
+        session['username'] = username
+        new_token = secrets.token_hex(16)
+        cursor = c.execute('UPDATE users SET token = ? WHERE username = ?', (new_token, username))
+        conn.commit()
+
+    conn.close()    
+
+    return Response(response=json.dumps({'status': login_success}), status=200, mimetype="application/json")
+
+@app.route('/api/logout')
+def logout():
+    conn = sqlite3.connect(db_filename)
+    c = conn.cursor()
+    c.execute('UPDATE users SET token = ? WHERE username = ?', ('', session['username']))
+    conn.commit()
+    conn.close()
+    session['username'] = None
+
+    return Response(response=json.dumps({'status': True}), status=200, mimetype="application/json")
+
+@app.route('/login')
+def login_page():
+    return render_template('login.html')
+
+# def login(self, username, password):
+#     return self.app.post('/login', data=dict(
+#         username=username,
+#         password=password
+#     ), follow_redirects=True)
+
+# def logout(self):
+#     return self.app.get('/logout', follow_redirects=True)
 
 # start flask app
 app.run(host="0.0.0.0", port=5000)
