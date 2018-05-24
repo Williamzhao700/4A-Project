@@ -11,9 +11,11 @@ from configparser import ConfigParser
 
 import face_recognition
 import numpy as np
-from flask import Flask, Response, redirect, render_template, request, session
+from flask import (Flask, Response, redirect, render_template, request,
+                   session, url_for)
 from imutils import paths
 from imutils.object_detection import non_max_suppression
+from werkzeug.utils import secure_filename
 
 import cv2
 
@@ -24,7 +26,11 @@ cfg.read('config.cfg')
 # define default video directory
 video_temp = cfg.get('server', 'video_temp')
 db_filename = cfg.get('server', 'db_filename')
-print(db_filename)
+face_upload_folder = cfg.get('server', 'face_upload_folder')
+face_encoding_folder = cfg.get('server', 'face_encoding_folder')
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+
+# print(db_filename)
 
 # secret key, for security
 secret_key = cfg.get('server', 'secret_key')
@@ -39,6 +45,7 @@ hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 # Initialize the Flask application
 app = Flask(__name__)
 app.secret_key = app_secret_key
+app.config['face_upload_folder'] = face_upload_folder
 
 # route http posts to this method
 @app.route('/api/process', methods=['POST'])
@@ -95,7 +102,7 @@ def identify_face(input_frame, known_faces):
         for i in range(len(matches)):
             if matches[i]:
                 detected_faces.append(list(known_faces.keys())[i])
-                logging.info('find %s' %(list(known_faces.keys())[i]))
+                logging.info('find %s' % list(known_faces.keys())[i])
     
     return detected_faces
 
@@ -103,13 +110,13 @@ def identify_face(input_frame, known_faces):
 def video_streaming_page():
     if not session.get('username'):
         return redirect('/login')
-    else:
-        conn = sqlite3.connect(db_filename)
-        c = conn.cursor()
-        cursor = c.execute('SELECT token FROM users WHERE username = ?', (session['username'],))
-        token = cursor.fetchall()[0][0]
-        conn.close()
-        return render_template('stream.html', token=token)
+    
+    conn = sqlite3.connect(db_filename)
+    c = conn.cursor()
+    cursor = c.execute('SELECT token FROM users WHERE username = ?', (session['username'],))
+    token = cursor.fetchall()[0][0]
+    conn.close()
+    return render_template('stream.html', token=token)
 
 @app.route('/api/control', methods=['POST'])
 def platform_control():
@@ -150,18 +157,87 @@ def logout():
 
     return Response(response=json.dumps({'status': True}), status=200, mimetype="application/json")
 
+# define the login page
 @app.route('/login')
 def login_page():
     return render_template('login.html')
 
-# def login(self, username, password):
-#     return self.app.post('/login', data=dict(
-#         username=username,
-#         password=password
-#     ), follow_redirects=True)
+# handle the register request
+@app.route('/api/register', methods = ['POST'])
+def register():
+    username = request.form['username']
+    password = hashlib.sha256((request.form['password'] + secret_key).encode()).hexdigest()
+    conn = sqlite3.connect(db_filename)
+    c = conn.cursor()
+    cursor = c.execute('SELECT id FROM users WHERE username = ?', (username,))
+    
+    user_exists = bool(cursor.fetchall())
 
-# def logout(self):
-#     return self.app.get('/logout', follow_redirects=True)
+    # the user already exists
+    if user_exists:
+        conn.close()
+        return Response(response=json.dumps({'status': False}), status=200, mimetype="application/json")
+
+    c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+    conn.commit()
+    conn.close()
+    return Response(response=json.dumps({'status': True}), status=200, mimetype="application/json")
+
+# define the login page
+@app.route('/register')
+def register_page():
+    return render_template('register.html')
+
+# handle user image upload request
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+
+@app.route('/api/upload', methods = ['GET','POST'])
+def upload_image():
+    # check login status
+    if not session.get('username'):
+        print('faile to login!')
+        return redirect('/login')
+    # upload and save file
+    if request.method == 'POST':
+        file = request.files['image']
+        
+        if file and allowed_file(file.filename):
+            # save user image
+            filename = session['username'] + '.' + file.filename.rsplit('.', 1)[1] 
+            file.save(os.path.join(app.config['face_upload_folder'],filename))
+            # print(os.path.join(app.config['face_upload_folder'], filename))
+            # encode the image and save the encoding result
+            user_image = face_recognition.load_image_file(os.path.join(app.config['face_upload_folder'],filename))
+            user_encoding = face_recognition.face_encodings(user_image)[0]
+            np.savetxt(os.path.join(face_encoding_folder, filename.rsplit('.', 1)[0]) + '.txt', user_encoding, delimiter=',')
+            # successfully upload the image
+            return Response(response=json.dumps({'success': True}), status=200, mimetype="application/json")
+
+    # fail to upload image
+    return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json")
+
+# handle the user delete request
+@app.route('/api/deleteProfile', methods = ['GET'])
+def delete_image():
+    # check login status
+    if not session.get('username'):
+        print('faile to login!')
+        return redirect('/login')
+    
+    filename = session['username']
+    faces_list = [f for f in os.listdir(face_upload_folder)]
+    face_list_without_ext = [os.path.splitext(f)[0] for f in faces_list]
+    # encoding_list = [os.path.splitext(f)[0] for f in os.listdir(face_encoding_folder)]
+
+    if filename in face_list_without_ext:
+        index = face_list_without_ext.index(filename)
+        os.remove(os.path.join(face_upload_folder, faces_list[index]))
+        os.remove(os.path.join(face_encoding_folder, filename) + '.txt')
+        return Response(response=json.dumps({'success': True}), status=200, mimetype="application/json")
+
+    return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json")
 
 # start flask app
 app.run(host="0.0.0.0", port=5000)

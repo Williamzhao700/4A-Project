@@ -111,3 +111,5 @@ ENV/
 
 # project temp files
 .tmp/*
+.faces/*
+.encodings/*

@@ -10,18 +10,22 @@
     <title>Camera Stream!!!</title>
 
     <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Custom styles for this template -->
+    <!-- <link href="{{ url_for('static', filename='stream.css') }}" rel="stylesheet"> -->
 </head>
 
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <a class="navbar-brand" href="#">Camera Stream</a>
         <a class="navbar-brand" href="#" id="logout_button">Logout</a>
+        <a href="#" data-toggle="modal" data-target="#myProfileDialog">
+            <span class="glyphicon glyphicon-user"></span> 管理个人信息</a>
     </nav>
     <div class="container">
 
         <div class="starter-template">
             <h1>Home Live Stream</h1>
-            <img src="http://127.0.0.1:7777/api/streaming?token={{ token }}" />
+            <img src="http://127.0.0.1:7777/api/streaming?token={{ token }}" ，class="img-fluid"  />
             <br>
 
             <div class="btn-group" role="group" aria-label="Basic example">
@@ -33,10 +37,70 @@
         </div>
 
     </div>
+
+    <div class="modal fade" id="myProfileDialog" tabindex="-1" role="dialog" aria-labelledby="myProfileDialogLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="myProfileDialogLabel">我的个人信息</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="media">
+                        <div class="media-body">
+                            <form class="form-horizontal">
+                                <p class="tip-under-image" id="myProfileUploadTips"></p>
+
+                                <div class="form-group">
+                                    <div class="col-sm-4">
+                                        <button type="button" class="btn btn-primary btn-block" id="btnUpdateMyAvatar">更换我的图片</button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="col-sm-4">
+                                        <button type="button" class="btn btn-danger btn-block" id="btnDeleteMyAvatar">删除我的图片</button>
+                                    </div>
+                                </div>
+                                <!-- <div class="form-group">
+                                    <div class="col-sm-5">
+                                        <button type="button" class="btn btn-primary btn-block" id="btnUpdateMyAvatar">更换我的图片</button>
+                                    </div>
+                                    <div class="col-sm-5">
+                                        <button type="button" class="btn btn-primary btn-block" id="btnDeleteMyAvatar">删除我的图片</button>
+                                    </div>
+                                </div> -->
+                                <div id="errormsg" class="clearfix redtext" style="padding-top: 10px;"></div>
+                            </form>
+                        </div>
+                        <!-- <div class="media-right">
+                            <img class="media-object user-image" id="myImageShow">
+                            <p class="tip-under-image" id="myProfileUploadTips"></p>
+                            <button type="button" class="btn btn-primary btn-block" id="btnUpdateMyAvatar">更换我的头像</button>
+                            <button type="button" class="btn btn-danger btn-block" id="btnDeleteMyAvatar">删除我的头像</button>
+                            <input type="text" class="form-control hidden" id="myAvatar">
+                        </div> -->
+                    </div>
+                    <div class="row" id="myProfileStatus"></div>
+                </div>
+                <!-- <div class="modal-footer">
+                    <button type="button" class="btn btn-info" id="btnUpdateMyProfile">保存</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                </div> -->
+            </div>
+        </div>
+    </div>
+
     <!-- /.container -->
     <script src="{{ url_for('static', filename='jquery-3.3.1.min.js')  }}"></script>
     <script src="{{ url_for('static', filename='bootstrap.min.js')  }}"></script>
+    <script src="{{ url_for('static', filename='SimpleAjaxUploader.min.js')  }}"></script>
+    <script src="{{ url_for('static', filename='message.js')  }}"></script>
+    <script src="{{ url_for('static', filename='upload.js')  }}"></script>
+
     <script>
+        // control button action
         $('.btn-action').click(function () {
             var action = $(this).data('action');
             $.post('/api/control', { 'action': action }, function (data) {
@@ -46,13 +110,23 @@
                 alert('Action ' + action + ' failed!');
             });
         });
-
-        $('#logout_button').click(function() {
+        // logout button action
+        $('#logout_button').click(function () {
             $.get('/api/logout', {}, function (data) {
                 location = '/login';
             })
-        })
-
+        });
+        // delete button action
+        $('#btnDeleteMyAvatar').click(function () {
+            $.get('api/deleteProfile', {}, function (data) {
+                if (data.success === true) {
+                    alert('Delete success!')
+                }
+                else {
+                    alert('Delete unsuccess!')
+                }
+            })
+        });
     </script>
 </body>
 
