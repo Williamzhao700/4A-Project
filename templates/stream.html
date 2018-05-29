@@ -103,8 +103,8 @@
         // control button action
         $('.btn-action').click(function () {
             var action = $(this).data('action');
-            $.post('/api/control', { 'action': action }, function (data) {
-                alert('Action ' + action + ' success with message: ' + JSON.stringify(data));
+            $.post('/api/control', { 'action': action }, function () {
+                // alert('Action ' + action + ' success with message: ' + JSON.stringify(data));
                 // you can get data.status
             }).fail(function () {
                 alert('Action ' + action + ' failed!');
