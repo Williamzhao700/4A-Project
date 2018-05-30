@@ -19,9 +19,9 @@ p2_now = 7.5
 # hardware part
 def beep(flag):  
 	if flag==1:
-		GPIO.output(16,GPIO.LOW) 
+		GPIO.output(21,GPIO.LOW) 
 	else:
-		GPIO.output(16,GPIO.HIGH)   
+		GPIO.output(21,GPIO.HIGH)   
 	
 def turn1(direction):
 	global p1_now
