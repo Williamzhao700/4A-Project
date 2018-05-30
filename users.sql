@@ -8,4 +8,4 @@ CREATE TABLE users(
     facedata TEXT DEFAULT ''
 );
 
-INSERT INTO users (username, password) VALUES('test', '19013bdbbf37def502d27840c7beaabc7fd85a6565bff3f01b09db4cf722e642');
+INSERT INTO users (id, username, password) VALUES(1, 'test', '19013bdbbf37def502d27840c7beaabc7fd85a6565bff3f01b09db4cf722e642');

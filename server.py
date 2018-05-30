@@ -18,6 +18,7 @@ from imutils.object_detection import non_max_suppression
 from werkzeug.utils import secure_filename
 
 import cv2
+from person_recognition import json_helper
 
 # read the config file
 cfg = ConfigParser()
@@ -51,6 +52,9 @@ def frame_process():
     r = request
     # save the recent frames
     frame_count = 0
+    # last_status = {'stranger_flag':False, 'owner_in_house': False, 'direction': '', 'action_time': ''}
+    current_status = {'stranger_flag': False,
+                      'owner_in_house': False, 'direction': '', 'action_time': ''}
     down_sample_rate = int(down_sample_rate_)
 
     # convert string of image data to uint8
@@ -73,9 +77,20 @@ def frame_process():
     # build a response dict to send back to client
     # response = {'message': 'image received. size={}x{}'.format(receive_frame.shape[1], receive_frame.shape[0])}
     # encode response using jsonpickle
-    with open(status_file, 'r') as f:
-        response_ = json.load(f)
-    return Response(response=json.dumps(response_), status=200, mimetype="application/json")
+    # with open(status_file, 'r') as f:
+    #     response_ = json.load(f)
+
+    conn = sqlite3.connect(db_filename)
+    c = conn.cursor()
+    c.execute(
+        'SELECT stranger_flag, owner_in_house, direction, action_time from status_table WHERE id = ?', (1, ))
+    rows = c.fetchall()
+    for row in rows:
+        current_status[row[0]] = row[1]
+    conn.commit()
+    conn.close()
+
+    return Response(response=json.dumps(current_status), status=200, mimetype="application/json")
 
 
 # the stream page
@@ -102,13 +117,20 @@ def platform_control():
     # get action time in seconds, to avoid mutiple requests in 1 second
     action_time = time.strftime("%Y-%m-%d %H:%M:%S")
     # print(action)
-    # store action into file
-    with open(status_file, 'r') as f:
-        status = json.load(f)
-    status['direction'] = action
-    status['action_time'] = action_time
-    with open(status_file, 'w') as f:
-        json.dump(status, f)
+    # store action into status table
+    conn = sqlite3.connect(db_filename)
+    c = conn.cursor()
+    c.execute('UPDATE status_table SET direction = ?, action_time = ? WHERE id = ?',
+              (action, action_time, 1))
+    conn.commit()
+    conn.close()
+
+    # with open(status_file, 'r') as f:
+    #     status = json.load(f)
+    # status['direction'] = action
+    # status['action_time'] = action_time
+    # with open(status_file, 'w') as f:
+    #     json.dump(status, f)
 
     return Response(response=json.dumps({'status': action}), status=200, mimetype="application/json")
 
@@ -198,7 +220,7 @@ def allowed_file(filename):
 def upload_image():
     # check login status
     if not session.get('username'):
-        print('faile to login!')
+        print('fail to login!')
         return redirect('/login')
     # upload and save file
     if request.method == 'POST':
@@ -228,7 +250,7 @@ def upload_image():
 def delete_image():
     # check login status
     if not session.get('username'):
-        print('faile to login!')
+        print('fail to login!')
         return redirect('/login')
 
     filename = session['username']
@@ -243,6 +265,59 @@ def delete_image():
         return Response(response=json.dumps({'success': True}), status=200, mimetype="application/json")
 
     return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json")
+
+
+# handle the out house status
+@app.route('/api/out_house', methods=['POST'])
+def out_house():
+    # check login status
+    if not session.get('username'):
+        print('fail to login!')
+        return redirect('/login')
+    try:
+        conn = sqlite3.connect(db_filename)
+        c = conn.cursor()
+        c.execute('UPDATE status_table SET owner_in_house = ? WHERE id = ?',
+                  (0, 1))
+        conn.commit()
+        conn.close()
+        return Response(response=json.dumps({'success': True}), status=200, mimetype="application/json")
+    except Exception as e:
+        return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json")
+
+    # json_helper(status_file, 'w', 'owner_in_house', False)
+
+
+# handle the in house status
+@app.route('/api/in_house', methods=['POST'])
+def in_house():
+    # check login status
+    if not session.get('username'):
+        print('fail to login!')
+        return redirect('/login')
+
+    try:
+        conn = sqlite3.connect(db_filename)
+        c = conn.cursor()
+        c.execute('UPDATE status_table SET owner_in_house = ? WHERE id = ?',
+                  (1, 1))
+        conn.commit()
+        conn.close()
+        # json_helper(status_file, 'w', 'owner_in_house', True)
+        return Response(response=json.dumps({'success': True}), status=200, mimetype="application/json")
+    except Exception as e:
+        return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json")
+
+
+# home page
+@app.route('/home')
+def home_page():
+    # check login status
+    if not session.get('username'):
+        print('fail to login!')
+        return redirect('/login')
+
+    return render_template('index.html')
 
 
 # start flask app

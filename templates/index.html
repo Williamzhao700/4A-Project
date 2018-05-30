@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="renderer" content="webkit">
 
-    <title>Camera Stream!!!</title>
+    <title>Index</title>
 
     <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
     <!-- Custom styles for this template -->
@@ -16,7 +16,9 @@
 
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="/home">Camera Stream</a>
+        <a class="navbar-brand" href="/stream" id="streaming">Streaming</a>
+        <a class="navbar-brand" href="#" id="in_house">I'm in house!</a>
+        <a class="navbar-brand" href="#" id="out_house">I'm out of my house!</a>
         <a class="navbar-brand" href="#" id="logout_button">Logout</a>
         <a href="#" data-toggle="modal" data-target="#myProfileDialog">
             <span class="glyphicon glyphicon-user"></span> 管理个人信息</a>
@@ -24,16 +26,7 @@
     <div class="container">
 
         <div class="starter-template">
-            <h1>Home Live Stream</h1>
-            <img src="http://127.0.0.1:7777/api/streaming?token={{ token }}" ，class="img-fluid"  />
-            <br>
-
-            <div class="btn-group" role="group" aria-label="Basic example">
-                <button type="button" class="btn btn-secondary btn-action" data-action="up">Up</button>
-                <button type="button" class="btn btn-secondary btn-action" data-action="down">Down</button>
-                <button type="button" class="btn btn-secondary btn-action" data-action="left">Left</button>
-                <button type="button" class="btn btn-secondary btn-action" data-action="right">Right</button>
-            </div>
+            <h1>Home Security System</h1>
         </div>
 
     </div>
@@ -100,14 +93,34 @@
     <script src="{{ url_for('static', filename='upload.js')  }}"></script>
 
     <script>
-        // control button action
-        $('.btn-action').click(function () {
+        // in house
+        $('#in_house').click(function () {
             var action = $(this).data('action');
-            $.post('/api/control', { 'action': action }, function () {
-                // alert('Action ' + action + ' success with message: ' + JSON.stringify(data));
+            $.post('/api/in_house', {}, function (data) {
+                if (data.success === true) {
+                    alert('I\'m back!')
+                }
+                else {
+                    alert('Error!')
+                }
                 // you can get data.status
             }).fail(function () {
-                alert('Action ' + action + ' failed!');
+                alert('Opps, failed!');
+            });
+        });
+        // out of house
+        $('#out_house').click(function () {
+            var action = $(this).data('action');
+            $.post('/api/out_house', {}, function (data) {
+                if (data.success === true) {
+                    alert('I\'m out')
+                }
+                else {
+                    alert('Error!')
+                }
+                // you can get data.status
+            }).fail(function () {
+                alert('Opps, failed!');
             });
         });
         // logout button action
@@ -129,5 +142,3 @@
         });
     </script>
 </body>
-
-</html>

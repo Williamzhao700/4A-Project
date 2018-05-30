@@ -37,7 +37,7 @@
             var password = $('#input_password').val();
             $.post('/api/login', { 'username': username, 'password': password}, function (data) {
                 if (data.status)
-                  location = "/stream";
+                  location = '/home';
                 else
                   alert('Login failed!');
             }).fail(function () {
