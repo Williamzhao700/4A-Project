@@ -110,7 +110,3 @@ ENV/
 .vscode/settings.json
 
 # project temp files
-tmp/*
-faces/*
-encodings/*
-recognition_tmp/*
