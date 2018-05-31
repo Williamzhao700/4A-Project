@@ -1,6 +1,8 @@
+import fcntl
 import json
 import os
 import sqlite3
+import time
 from configparser import ConfigParser
 
 import face_recognition
@@ -42,28 +44,40 @@ def identify_face(input_frame, known_faces, names):
 
 # deal with json file
 def json_helper(file, mode='r', arg='', value=''):
-    arg_dict = {'stranger_flag': (bool,), 'owner_in_house': (bool,)}
+    expect_type_dict = {'stranger_flag': (bool,), 'owner_in_house': (bool,)}
     try:
         # first open and read the file
         with open(file, 'r') as file_in:
+            fcntl.flock(file_in, fcntl.LOCK_EX)
             status = json.load(file_in)
+            fcntl.flock(file_in, fcntl.LOCK_UN)
+
+        # handle no arg
+        if arg == '':
+            if mode == 'r':
+                return status
+            else:
+                raise KeyError(f"No key named '{arg}' found for write mode, only '{tuple(expect_type_dict.keys())}' are accepted")
 
         # check if arg is valid
-        if arg in arg_dict:
-            # read mode
+        if arg in expect_type_dict:
             if mode == 'r':
+                # read mode
                 return status[arg]
-
-            # write mode
-            if mode == 'w':
-                if isinstance(value, arg_dict[arg]):
+            elif mode == 'w':
+                # write mode
+                if isinstance(value, expect_type_dict[arg]):
                     status[arg] = value
                     with open(file, 'w') as file_out:
+                        fcntl.flock(file_in, fcntl.LOCK_EX)
                         json.dump(status, file_out)
+                        fcntl.flock(file_in, fcntl.LOCK_UN)
                 else:
-                    raise ValueError(arg_dict[arg])
+                    raise ValueError(f"Expect type of arg {arg} to be one of {expect_type_dict[arg]}, got {type(arg).__name__}")
+            else:
+                raise ValueError(f"Invalid mode '{mode}'")
         else:
-            raise ValueError(arg_dict.keys())
+            raise KeyError(f"No key named '{arg}' found, only '{tuple(expect_type_dict.keys())}' are accepted")
     except Exception as e:
         print('Reason:', e)
 
@@ -74,21 +88,21 @@ def recognition_handler(result, names, status_file):
     if result:
         # get if a owner in frame
         owner_list = [person for person in result if person in names]
-
+        # data_head = time.strftime("%Y-%m-%d %H:%M:%S")
         if owner_list:
-            # json_helper(status_file, 'w', arg='owner_in_house', value=True)
-            conn = sqlite3.connect(db_filename)
-            c = conn.cursor()
-            c.execute('UPDATE status_table SET owner_in_house = ? WHERE id = ?', (1, 1))
-            conn.commit()
-            conn.close()
+            json_helper(status_file, 'w', arg='owner_in_house', value=True)
+            # conn = sqlite3.connect(db_filename)
+            # c = conn.cursor()
+            # c.execute('UPDATE status_table SET owner_in_house = ? WHERE id = ?', (1, 1))
+            # conn.commit()
+            # conn.close()
         else:
-            # json_helper(status_file, 'w', arg='stranger_flag', value=True)
-            conn = sqlite3.connect(db_filename)
-            c = conn.cursor()
-            c.execute('UPDATE status_table SET stranger_flag = ? WHERE id = ?', (1, 1))
-            conn.commit()
-            conn.close()
+            json_helper(status_file, 'w', arg='stranger_flag', value=True)
+            # conn = sqlite3.connect(db_filename)
+            # c = conn.cursor()
+            # c.execute('UPDATE status_table SET stranger_flag = ? WHERE id = ?', (1, 1))
+            # conn.commit()
+            # conn.close()
 
 
 def main():

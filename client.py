@@ -60,7 +60,7 @@ def send_frame(input_frame):
         handler.turn1(json_data['direction'])
 
     # for debug
-    # print(json_data)
+    print(json_data)
 
 if __name__ == '__main__':
     main()

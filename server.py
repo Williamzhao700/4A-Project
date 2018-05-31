@@ -1,3 +1,4 @@
+import fcntl
 import hashlib
 import json
 import logging
@@ -31,7 +32,6 @@ face_upload_folder = cfg.get('server', 'face_upload_folder')
 face_encoding_folder = cfg.get('server', 'face_encoding_folder')
 status_file = cfg.get('server', 'status_file')
 recognition_tmp = cfg.get('server', 'recognition_tmp')
-down_sample_rate_ = cfg.get('server', 'down_sample_rate')
 ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
 # secret key, for security
@@ -43,19 +43,16 @@ app = Flask(__name__)
 app.secret_key = app_secret_key
 app.config['face_upload_folder'] = face_upload_folder
 
+
 # route http posts to this method
-
-
 @app.route('/api/process', methods=['POST'])
 def frame_process():
     # define the response
     r = request
-    # save the recent frames
-    frame_count = 0
-    # last_status = {'stranger_flag':False, 'owner_in_house': False, 'direction': '', 'action_time': ''}
     current_status = {'stranger_flag': False,
-                      'owner_in_house': False, 'direction': '', 'action_time': ''}
-    down_sample_rate = int(down_sample_rate_)
+                      'owner_in_house': False,
+                      'direction': session['direction'],
+                      'action_time': session['action_time']}
 
     # convert string of image data to uint8
     nparr = np.fromstring(r.data, np.uint8)
@@ -66,29 +63,33 @@ def frame_process():
     ct = time.time()
     data_head = time.strftime("%Y-%m-%d %H:%M:%S")
     data_secs = (ct - int(ct)) * 1000
+    # high accuracy, 1 milli second
     time_stamp = "%s.%03d" % (data_head, data_secs)
+    # high accuracy, 1 second
+    time_stamp_low_accuracy = "%s" % data_head
     cv2.imwrite(os.path.join(video_temp, time_stamp) + '.jpg', receive_frame)
+    cv2.imwrite(os.path.join(recognition_tmp, time_stamp_low_accuracy) +'.jpg', receive_frame)
 
-    frame_count += 1
-    if frame_count == down_sample_rate:
-        cv2.imwrite(os.path.join(recognition_tmp, time_stamp) +
-                    '.jpg', receive_frame)
-        frame_count = 0
+    status_tmp = json_helper(status_file, 'r')
+        
+    (current_status['stranger_flag'], current_status['owner_in_house']) = (
+        status_tmp['stranger_flag'], status_tmp['owner_in_house'])
+
     # build a response dict to send back to client
     # response = {'message': 'image received. size={}x{}'.format(receive_frame.shape[1], receive_frame.shape[0])}
     # encode response using jsonpickle
     # with open(status_file, 'r') as f:
     #     response_ = json.load(f)
 
-    conn = sqlite3.connect(db_filename)
-    c = conn.cursor()
-    c.execute(
-        'SELECT stranger_flag, owner_in_house, direction, action_time from status_table WHERE id = ?', (1, ))
-    rows = c.fetchall()
-    for row in rows:
-        current_status[row[0]] = row[1]
-    conn.commit()
-    conn.close()
+    # conn = sqlite3.connect(db_filename)
+    # c = conn.cursor()
+    # c.execute(
+    #     'SELECT stranger_flag, owner_in_house, direction, action_time from status_table WHERE id = ?', (1, ))
+    # rows = c.fetchall()
+    # for row in rows:
+    #     current_status[row[0]] = row[1]
+    # conn.commit()
+    # conn.close()
 
     return Response(response=json.dumps(current_status), status=200, mimetype="application/json")
 
@@ -113,17 +114,21 @@ def video_streaming_page():
 # handle the action request
 @app.route('/api/control', methods=['POST'])
 def platform_control():
-    action = request.form['action']
+    # check login status
+    if not session.get('username'):
+        return redirect('/login')
+
+    session['direction'] = request.form['action']
     # get action time in seconds, to avoid mutiple requests in 1 second
-    action_time = time.strftime("%Y-%m-%d %H:%M:%S")
+    session['action_time'] = time.strftime("%Y-%m-%d %H:%M:%S")
     # print(action)
     # store action into status table
-    conn = sqlite3.connect(db_filename)
-    c = conn.cursor()
-    c.execute('UPDATE status_table SET direction = ?, action_time = ? WHERE id = ?',
-              (action, action_time, 1))
-    conn.commit()
-    conn.close()
+    # conn = sqlite3.connect(db_filename)
+    # c = conn.cursor()
+    # c.execute('UPDATE status_table SET direction = ?, action_time = ? WHERE id = ?',
+    #           (action, action_time, 1))
+    # conn.commit()
+    # conn.close()
 
     # with open(status_file, 'r') as f:
     #     status = json.load(f)
@@ -132,7 +137,7 @@ def platform_control():
     # with open(status_file, 'w') as f:
     #     json.dump(status, f)
 
-    return Response(response=json.dumps({'status': action}), status=200, mimetype="application/json")
+    return Response(response=json.dumps({'status': session['direction']}), status=200, mimetype="application/json")
 
 
 # handle the login request

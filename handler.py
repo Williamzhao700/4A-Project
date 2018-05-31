@@ -18,6 +18,7 @@ p2_now = 7.5
 
 # hardware part
 def beep(flag):  
+	p = get_pin(21)
 	if flag==1:
 		GPIO.output(21,GPIO.LOW) 
 	else:
