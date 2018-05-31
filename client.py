@@ -49,6 +49,7 @@ def send_frame(input_frame):
     response = requests.post(process_url, data=frame_data.tostring(), headers=headers)
     # decode response
     json_data = response.json()
+    handler.init(21)
 
     if json_data['stranger_flag']:
         handler.beep(1)

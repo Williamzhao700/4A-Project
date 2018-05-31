@@ -16,6 +16,12 @@ frame_num = 0
 p1_now = 4
 p2_now = 7.5 
 
+# initialize  
+def init(trig): 
+    GPIO.setwarnings(False)
+    GPIO.setmode(GPIO.BCM) 
+    GPIO.setup(trig,GPIO.OUT,initial=GPIO.HIGH) 
+
 # hardware part
 def beep(flag):  
 	p = get_pin(21)
