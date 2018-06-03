@@ -112,3 +112,4 @@ ENV/
 # project temp files
 faces/*
 encodings/*
+.DS_Store
