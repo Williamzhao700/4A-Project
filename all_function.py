@@ -7,7 +7,7 @@ def init():
     atexit.register(GPIO.cleanup)
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(6,GPIO.OUT,initial=GPIO.HIGH)
-    GPIO.setup(21,GPIO.OUT,initial=GPIO.HIGH)
+    # GPIO.setup(21,GPIO.OUT,initial=GPIO.HIGH)
     # GPIO.setup(13,GPIO.IN,pull_up_down=GPIO.PUD_DOWN)
     # GPIO.setup(20,GPIO.IN,pull_up_down=GPIO.PUD_DOWN)
 

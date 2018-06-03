@@ -206,12 +206,12 @@ def login():
 
 @app.route('/api/logout')
 def logout():
-    conn = sqlite3.connect(db_filename)
-    c = conn.cursor()
-    c.execute('UPDATE users SET token = ? WHERE username = ?',
-              ('', session['username']))
-    conn.commit()
-    conn.close()
+    # conn = sqlite3.connect(db_filename)
+    # c = conn.cursor()
+    # c.execute('UPDATE users SET token = ? WHERE username = ?',
+    #           ('', session['username']))
+    # conn.commit()
+    # conn.close()
     session['username'] = None
 
     return Response(response=json.dumps({'status': True}), status=200, mimetype="application/json")
