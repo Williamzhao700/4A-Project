@@ -113,3 +113,4 @@ ENV/
 faces/*
 encodings/*
 .DS_Store
+email_helper.py
