@@ -39,6 +39,7 @@ ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 # secret key, for security
 secret_key = cfg.get('server', 'secret_key')
 app_secret_key = cfg.get('server', 'app_secret_key')
+secret_key_streaming = cfg.get('server', 'secret_key_streaming')
 
 # initialize the status and control file
 json_helper(control_file, 'w', arg='direction', value='undefined')
@@ -50,6 +51,7 @@ json_helper(status_file, 'w', arg='owner_in_house', value=True)
 app = Flask(__name__)
 app.secret_key = app_secret_key
 app.config['face_upload_folder'] = face_upload_folder
+app.config['secret_key_streaming'] = secret_key_streaming
 
 # get known face encodings
 # face_encodings = [os.path.join(f, face_encoding_folder)
@@ -135,12 +137,13 @@ def video_streaming_page():
         return redirect('/login')
 
     # use dynamic token to access the video stream
-    conn = sqlite3.connect(db_filename)
-    c = conn.cursor()
-    cursor = c.execute(
-        'SELECT token FROM users WHERE username = ?', (session['username'],))
-    token = cursor.fetchall()[0][0]
-    conn.close()
+    # conn = sqlite3.connect(db_filename)
+    # c = conn.cursor()
+    # cursor = c.execute(
+    #     'SELECT token FROM users WHERE username = ?', (session['username'],))
+    # token = cursor.fetchall()[0][0]
+    # conn.close()
+    token = app.config['secret_key_streaming']
     return render_template('stream.html', token=token)
 
 
