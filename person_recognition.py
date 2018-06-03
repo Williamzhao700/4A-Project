@@ -48,7 +48,8 @@ def identify_face(input_frame, known_faces, names):
 
 # deal with json file
 def json_helper(file, mode='r', arg='', value=''):
-    expect_type_dict = {'stranger_flag': (bool,int), 'owner_in_house': (bool,int), 'direction':(str, ), 'action_time': (str,)}
+    expect_type_dict = {'stranger_flag': (bool, int), 'owner_in_house': (
+        bool, int), 'direction': (str, ), 'action_time': (str,)}
     try:
         # first open and read the file
         with open(file, 'r') as file_in:
@@ -61,7 +62,8 @@ def json_helper(file, mode='r', arg='', value=''):
             if mode == 'r':
                 return status
             else:
-                raise KeyError(f"No key named '{arg}' found for write mode, only '{tuple(expect_type_dict.keys())}' are accepted")
+                raise KeyError(
+                    f"No key named '{arg}' found for write mode, only '{tuple(expect_type_dict.keys())}' are accepted")
 
         # check if arg is valid
         if arg in status:
@@ -79,11 +81,13 @@ def json_helper(file, mode='r', arg='', value=''):
                         json.dump(status, file_out)
                         fcntl.flock(file_out, fcntl.LOCK_UN)
                 else:
-                    raise ValueError(f"Expect type of arg {arg} to be one of {expect_type_dict[arg]}, got {type(arg).__name__}")
+                    raise ValueError(
+                        f"Expect type of arg {arg} to be one of {expect_type_dict[arg]}, got {type(arg).__name__}")
             else:
                 raise ValueError(f"Invalid mode '{mode}'")
         else:
-            raise KeyError(f"No key named '{arg}' found, only '{tuple(status.keys())}' are accepted")
+            raise KeyError(
+                f"No key named '{arg}' found, only '{tuple(status.keys())}' are accepted")
     except Exception as e:
         print('Reason:', e)
 
@@ -121,8 +125,9 @@ def main():
     face_encodings = [os.path.join(face_encoding_folder, f)
                       for f in sorted(os.listdir(face_encoding_folder))]
     known_faces = [np.loadtxt(f, delimiter=',') for f in face_encodings]
-    names = [os.path.splitext(f)[0] for f in sorted(os.listdir(face_encoding_folder))]
-    print(names)
+    names = [os.path.splitext(f)[0]
+             for f in sorted(os.listdir(face_encoding_folder))]
+    # print(names)
 
     # tmp status
     # arrive_tmp = []
@@ -145,7 +150,7 @@ def main():
     image_ = os.path.join(frame_tmp, all_frames[0])
     # print(image_)
     input_frame_tmp = cv2.imread(image_)
-    
+
     while input_frame_tmp is None:
         # wait and retry to read the image
         time.sleep(0.5)
@@ -155,7 +160,7 @@ def main():
     input_frame = input_frame_tmp[..., ::-1]
     input_frame_prev = input_frame
     os.remove(os.path.join(frame_tmp, all_frames[0]))
-    
+
     while True:
         all_frames = sorted(os.listdir(frame_tmp))
         # print(all_frames[0])
@@ -164,7 +169,7 @@ def main():
             # delete the previous frame from folder
             time.sleep(0.5)
             image_ = os.path.join(frame_tmp, all_frames[0])
-            
+
             input_frame_tmp = cv2.imread(image_)
             while input_frame_tmp is None:
                 # wait and retry to read the image
@@ -182,13 +187,21 @@ def main():
 
             # no owner in house, start to detect stranger
             if not owner_status:
-                print('no owner at home')
+                face_encodings = [os.path.join(face_encoding_folder, f) for f in sorted(
+                    os.listdir(face_encoding_folder))]
+                known_faces = [np.loadtxt(f, delimiter=',')
+                               for f in face_encodings]
+                names = [os.path.splitext(f)[0] for f in sorted(
+                    os.listdir(face_encoding_folder))]
+                # print('no owner at home')
                 # use ssim to compare the difference of 2 frames, to reduce computation
-                diff = compare_ssim(input_frame_prev, input_frame, multichannel=True)
+                diff = compare_ssim(
+                    input_frame_prev, input_frame, multichannel=True)
                 if diff < 0.8:
                     print('start to identify!')
                     # first, detect faces in the frames
-                    face_result = identify_face(input_frame, known_faces, names)
+                    face_result = identify_face(
+                        input_frame, known_faces, names)
                     print('identify result:')
                     print(face_result)
                     recognition_handler(face_result, names, status_file)
@@ -204,7 +217,6 @@ def main():
             # for testing
             # print('no more frames!')
         #     break
-
 
 
 if __name__ == '__main__':
