@@ -5,6 +5,7 @@ import logging
 import os
 import pickle
 import secrets
+import re
 import sqlite3
 import sys
 import time
@@ -190,10 +191,10 @@ def login():
 
     if login_success:
         session['username'] = username
-        new_token = secrets.token_hex(16)
-        cursor = c.execute(
-            'UPDATE users SET token = ? WHERE username = ?', (new_token, username))
-        conn.commit()
+        # new_token = secrets.token_hex(16)
+        # cursor = c.execute(
+        #     'UPDATE users SET token = ? WHERE username = ?', (new_token, username))
+        # conn.commit()
 
     conn.close()
 
@@ -223,6 +224,14 @@ def login_page():
 @app.route('/api/register', methods=['POST'])
 def register():
     username = request.form['username']
+
+    # if secrets.token_bytes(1)[0] < 300:
+    #     assert 0, 'fuck'
+
+    if not re.match('^[0-9a-zA-Z]+$', username):
+        # bad username
+        return Response(response=json.dumps({'status': False}), status=400, mimetype="application/json")
+
     password = hashlib.sha256(
         (request.form['password'] + secret_key).encode()).hexdigest()
     conn = sqlite3.connect(db_filename)
