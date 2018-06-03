@@ -36,10 +36,11 @@ def main():
     while cap.isOpened():
         _, frame = cap.read()
         json_data = send_frame(frame)
-        if json_data['stranger_flag'] == 1:
-            all_function.beep(1)
-        else:
-            all_function.beep(0)
+        all_function.beep(json_data['stranger_flag'])
+        # if json_data['stranger_flag'] == 1:
+        #     all_function.beep(1)
+        # else:
+        #     all_function.beep(0)
 
         if json_data['action_time'] != last_action_time:
             last_action_time = json_data['action_time']

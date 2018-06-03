@@ -6,10 +6,10 @@ import atexit
 def init():
     atexit.register(GPIO.cleanup)
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(16,GPIO.OUT,initial=GPIO.HIGH)
+    GPIO.setup(6,GPIO.OUT,initial=GPIO.HIGH)
     GPIO.setup(21,GPIO.OUT,initial=GPIO.HIGH)
-    GPIO.setup(13,GPIO.IN,pull_up_down=GPIO.PUD_DOWN)
-    GPIO.setup(20,GPIO.IN,pull_up_down=GPIO.PUD_DOWN)
+    # GPIO.setup(13,GPIO.IN,pull_up_down=GPIO.PUD_DOWN)
+    # GPIO.setup(20,GPIO.IN,pull_up_down=GPIO.PUD_DOWN)
 
 
 p1_now=4
@@ -17,9 +17,9 @@ p2_now=7
 
 def beep(flag):
     if flag:
-        GPIO.output(21,GPIO.LOW)
+        GPIO.output(6,GPIO.LOW)
     else:
-        GPIO.output(21,GPIO.HIGH)
+        GPIO.output(6,GPIO.HIGH)
     # time.sleep(seconds)
 
 def beepBatch(seconds,timespan,counts):
