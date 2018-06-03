@@ -53,6 +53,9 @@ def main():
 
 
 def send_frame(input_frame):
+    # use last action time
+    global last_action_time, frame_count
+
     # resize to speed up
     # small_frame = cv2.resize(input_frame, dsize = (0, 0), fx=0.75, fy=0.75)
     frame_data = cv2.imencode('.jpg', input_frame)[1].tostring()
