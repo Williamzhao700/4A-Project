@@ -31,6 +31,7 @@ db_filename = cfg.get('server', 'db_filename')
 face_upload_folder = cfg.get('server', 'face_upload_folder')
 face_encoding_folder = cfg.get('server', 'face_encoding_folder')
 status_file = cfg.get('server', 'status_file')
+control_file = cfg.get('server', 'control_file')
 recognition_tmp = cfg.get('server', 'recognition_tmp')
 ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
@@ -38,24 +39,46 @@ ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 secret_key = cfg.get('server', 'secret_key')
 app_secret_key = cfg.get('server', 'app_secret_key')
 
+# initialize the status and control file
+json_helper(control_file, 'w', arg='direction', value='undefined')
+json_helper(control_file, 'w', arg='action_time', value='undefined')
+json_helper(status_file, 'w', arg='stranger_flag', value=False)
+json_helper(status_file, 'w', arg='owner_in_house', value=True)
+
 # Initialize the Flask application
 app = Flask(__name__)
 app.secret_key = app_secret_key
 app.config['face_upload_folder'] = face_upload_folder
 
+# get known face encodings
+# face_encodings = [os.path.join(f, face_encoding_folder)
+#                     for f in sorted(os.listdir(face_encoding_folder))]
+# known_faces = [np.loadtxt(f, delimiter=',') for f in face_encodings]
+# names = [print(os.path.splitext(f)[0]) for f in face_encodings]
+# print('initialization')
+
 
 # route http posts to this method
-@app.route('/api/process', methods=['POST'])
+@app.route('/api/process', methods=['POST', 'GET'])
 def frame_process():
     # define the response
-    r = request
+    r = request.data
+    # print(r)
     current_status = {'stranger_flag': False,
-                      'owner_in_house': False,
-                      'direction': session['direction'],
-                      'action_time': session['action_time']}
+                      'owner_in_house': True,
+                      'direction': 'undefined',
+                      'action_time': 'undefined'}
 
+    # if session.get('direction'):
+    #     current_status['direction'] = session['direction']
+    
+    # if session.get('action_time'):
+    #     current_status['action_time'] = session['action_time']
+
+    # frame_id = request.form['frame_id']
+    # print(frame_id)
     # convert string of image data to uint8
-    nparr = np.fromstring(r.data, np.uint8)
+    nparr = np.fromstring(r, np.uint8)
     # decode image
     receive_frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
@@ -69,11 +92,20 @@ def frame_process():
     time_stamp_low_accuracy = "%s" % data_head
     cv2.imwrite(os.path.join(video_temp, time_stamp) + '.jpg', receive_frame)
     cv2.imwrite(os.path.join(recognition_tmp, time_stamp_low_accuracy) +'.jpg', receive_frame)
+    # if data_secs < 500:
+    #     cv2.imwrite(os.path.join(recognition_tmp, time_stamp_low_accuracy + '-1') +'.jpg', receive_frame)
+    # else:
+    #     cv2.imwrite(os.path.join(recognition_tmp, time_stamp_low_accuracy + '-2') +'.jpg', receive_frame)
 
     status_tmp = json_helper(status_file, 'r')
+    
+    control_tmp = json_helper(control_file, 'r')
         
     (current_status['stranger_flag'], current_status['owner_in_house']) = (
         status_tmp['stranger_flag'], status_tmp['owner_in_house'])
+
+    (current_status['direction'], current_status['action_time']) = (
+        control_tmp['direction'], control_tmp['action_time'])
 
     # build a response dict to send back to client
     # response = {'message': 'image received. size={}x{}'.format(receive_frame.shape[1], receive_frame.shape[0])}
@@ -90,7 +122,7 @@ def frame_process():
     #     current_status[row[0]] = row[1]
     # conn.commit()
     # conn.close()
-
+    print(current_status)
     return Response(response=json.dumps(current_status), status=200, mimetype="application/json")
 
 
@@ -118,10 +150,11 @@ def platform_control():
     if not session.get('username'):
         return redirect('/login')
 
-    session['direction'] = request.form['action']
+    action = request.form['action']
+    # session['direction'] = request.form['action']
     # get action time in seconds, to avoid mutiple requests in 1 second
-    session['action_time'] = time.strftime("%Y-%m-%d %H:%M:%S")
-    # print(action)
+    # session['action_time'] = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(action)
     # store action into status table
     # conn = sqlite3.connect(db_filename)
     # c = conn.cursor()
@@ -129,7 +162,8 @@ def platform_control():
     #           (action, action_time, 1))
     # conn.commit()
     # conn.close()
-
+    json_helper(control_file, 'w', arg='direction', value=action)
+    json_helper(control_file, 'w', arg='action_time', value=time.strftime("%Y-%m-%d %H:%M:%S"))
     # with open(status_file, 'r') as f:
     #     status = json.load(f)
     # status['direction'] = action
@@ -241,10 +275,15 @@ def upload_image():
             user_image = face_recognition.load_image_file(
                 os.path.join(app.config['face_upload_folder'], filename))
             user_encoding = face_recognition.face_encodings(user_image)[0]
-            np.savetxt(os.path.join(face_encoding_folder, filename.rsplit(
-                '.', 1)[0]) + '.txt', user_encoding, delimiter=',')
-            # successfully upload the image
-            return Response(response=json.dumps({'success': True}), status=200, mimetype="application/json")
+            if user_encoding.size != 0:
+                np.savetxt(os.path.join(face_encoding_folder, filename.rsplit(
+                    '.', 1)[0]) + '.txt', user_encoding, delimiter=',')
+                # successfully upload the image
+                return Response(response=json.dumps({'success': True}), status=200, mimetype="application/json")
+            else:
+                # delete the saved file
+                os.remove(os.path.join(app.config['face_upload_folder'], filename))
+                return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json") 
 
     # fail to upload image
     return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json")
@@ -280,17 +319,18 @@ def out_house():
         print('fail to login!')
         return redirect('/login')
     try:
-        conn = sqlite3.connect(db_filename)
-        c = conn.cursor()
-        c.execute('UPDATE status_table SET owner_in_house = ? WHERE id = ?',
-                  (0, 1))
-        conn.commit()
-        conn.close()
+        # conn = sqlite3.connect(db_filename)
+        # c = conn.cursor()
+        # c.execute('UPDATE status_table SET owner_in_house = ? WHERE id = ?',
+        #           (0, 1))
+        # conn.commit()
+        # conn.close()
+        json_helper(status_file, 'w', 'owner_in_house', False)
         return Response(response=json.dumps({'success': True}), status=200, mimetype="application/json")
     except Exception as e:
         return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json")
 
-    # json_helper(status_file, 'w', 'owner_in_house', False)
+    
 
 
 # handle the in house status
@@ -302,13 +342,14 @@ def in_house():
         return redirect('/login')
 
     try:
-        conn = sqlite3.connect(db_filename)
-        c = conn.cursor()
-        c.execute('UPDATE status_table SET owner_in_house = ? WHERE id = ?',
-                  (1, 1))
-        conn.commit()
-        conn.close()
-        # json_helper(status_file, 'w', 'owner_in_house', True)
+        # conn = sqlite3.connect(db_filename)
+        # c = conn.cursor()
+        # c.execute('UPDATE status_table SET owner_in_house = ? WHERE id = ?',
+        #           (1, 1))
+        # conn.commit()
+        # conn.close()
+        json_helper(status_file, 'w', 'owner_in_house', True)
+        json_helper(status_file, 'w', 'stranger_flag', False)
         return Response(response=json.dumps({'success': True}), status=200, mimetype="application/json")
     except Exception as e:
         return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json")

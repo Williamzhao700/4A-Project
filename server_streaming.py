@@ -26,15 +26,16 @@ def video_gen():
         time.sleep(0.1)
         all_files = sorted(os.listdir(video_temp))
 
-        with open(os.path.join(video_temp, all_files[0]), 'rb') as f:
-            data = f.read()
-        if len(all_files) > 5:
+        if all_files:
+            with open(os.path.join(video_temp, all_files[0]), 'rb') as f:
+                data = f.read()
+            
             os.remove(os.path.join(video_temp, all_files[0]))
+            yield (b'--frame\r\n'
+                    b'Content-Type: image/jpeg\r\n\r\n' + data + b'\r\n\r\n')   
         else:
-            os.remove(os.path.join(video_temp, all_files[0]))
             time.sleep(0.5)
-        yield (b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + data + b'\r\n\r\n')
+            
 
 @app.route('/api/streaming')
 def get_video_streaming():
