@@ -40,7 +40,6 @@ def identify_face(input_frame, known_faces, names):
             known_faces, face_encoding, tolerance=0.40)
         name = 'Unknown'
         if True in matches:
-            print('!')
             # save all identified names
             index_tmp = matches.index(True)
             print(index_tmp)
@@ -111,11 +110,6 @@ def recognition_handler(result, names, status_file):
             print('detect owner!')
             json_helper(status_file, 'w', arg='owner_in_house', value=True)
             json_helper(status_file, 'w', arg='stranger_flag', value=False)
-            # conn = sqlite3.connect(db_filename)
-            # c = conn.cursor()
-            # c.execute('UPDATE status_table SET owner_in_house = ? WHERE id = ?', (1, 1))
-            # conn.commit()
-            # conn.close()
         else:
             if counter == counter_max:
                 # for debugging
@@ -128,11 +122,6 @@ def recognition_handler(result, names, status_file):
                 counter = 0
             else:
                 counter += 1
-            # conn = sqlite3.connect(db_filename)
-            # c = conn.cursor()
-            # c.execute('UPDATE status_table SET stranger_flag = ? WHERE id = ?', (1, 1))
-            # conn.commit()
-            # conn.close()
 
 
 def main():
@@ -142,14 +131,8 @@ def main():
     known_faces = [np.loadtxt(f, delimiter=',') for f in face_encodings]
     names = [os.path.splitext(f)[0]
              for f in sorted(os.listdir(face_encoding_folder))]
+    # for debbuging
     # print(names)
-
-    # tmp status
-    # arrive_tmp = []
-    # frame_count = 0
-
-    # print(time.time())
-    # counter, to eliminate the error detecting
 
     # clear cache
     all_frames = sorted(os.listdir(frame_tmp))
@@ -229,10 +212,9 @@ def main():
             input_frame_prev = input_frame
         else:
             pass
-        # time.sleep(0.6)
             # for testing
             # print('no more frames!')
-        #     break
+            # break
 
 
 if __name__ == '__main__':

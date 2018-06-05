@@ -53,13 +53,6 @@ app.secret_key = app_secret_key
 app.config['face_upload_folder'] = face_upload_folder
 app.config['secret_key_streaming'] = secret_key_streaming
 
-# get known face encodings
-# face_encodings = [os.path.join(f, face_encoding_folder)
-#                     for f in sorted(os.listdir(face_encoding_folder))]
-# known_faces = [np.loadtxt(f, delimiter=',') for f in face_encodings]
-# names = [print(os.path.splitext(f)[0]) for f in face_encodings]
-# print('initialization')
-
 
 # route http posts to this method
 @app.route('/api/process', methods=['POST', 'GET'])
@@ -72,14 +65,6 @@ def frame_process():
                       'direction': 'undefined',
                       'action_time': 'undefined'}
 
-    # if session.get('direction'):
-    #     current_status['direction'] = session['direction']
-    
-    # if session.get('action_time'):
-    #     current_status['action_time'] = session['action_time']
-
-    # frame_id = request.form['frame_id']
-    # print(frame_id)
     # convert string of image data to uint8
     nparr = np.fromstring(r, np.uint8)
     # decode image
@@ -94,37 +79,19 @@ def frame_process():
     # high accuracy, 1 second
     time_stamp_low_accuracy = "%s" % data_head
     cv2.imwrite(os.path.join(video_temp, time_stamp) + '.jpg', receive_frame)
-    cv2.imwrite(os.path.join(recognition_tmp, time_stamp_low_accuracy) +'.jpg', receive_frame)
-    # if data_secs < 500:
-    #     cv2.imwrite(os.path.join(recognition_tmp, time_stamp_low_accuracy + '-1') +'.jpg', receive_frame)
-    # else:
-    #     cv2.imwrite(os.path.join(recognition_tmp, time_stamp_low_accuracy + '-2') +'.jpg', receive_frame)
-
+    cv2.imwrite(os.path.join(recognition_tmp,
+                             time_stamp_low_accuracy) + '.jpg', receive_frame)
+    # read the file and update
     status_tmp = json_helper(status_file, 'r')
-    
     control_tmp = json_helper(control_file, 'r')
-        
+
     (current_status['stranger_flag'], current_status['owner_in_house']) = (
         status_tmp['stranger_flag'], status_tmp['owner_in_house'])
 
     (current_status['direction'], current_status['action_time']) = (
         control_tmp['direction'], control_tmp['action_time'])
 
-    # build a response dict to send back to client
-    # response = {'message': 'image received. size={}x{}'.format(receive_frame.shape[1], receive_frame.shape[0])}
-    # encode response using jsonpickle
-    # with open(status_file, 'r') as f:
-    #     response_ = json.load(f)
-
-    # conn = sqlite3.connect(db_filename)
-    # c = conn.cursor()
-    # c.execute(
-    #     'SELECT stranger_flag, owner_in_house, direction, action_time from status_table WHERE id = ?', (1, ))
-    # rows = c.fetchall()
-    # for row in rows:
-    #     current_status[row[0]] = row[1]
-    # conn.commit()
-    # conn.close()
+    # for debugging
     print(current_status)
     return Response(response=json.dumps(current_status), status=200, mimetype="application/json")
 
@@ -136,13 +103,6 @@ def video_streaming_page():
     if not session.get('username'):
         return redirect('/login')
 
-    # use dynamic token to access the video stream
-    # conn = sqlite3.connect(db_filename)
-    # c = conn.cursor()
-    # cursor = c.execute(
-    #     'SELECT token FROM users WHERE username = ?', (session['username'],))
-    # token = cursor.fetchall()[0][0]
-    # conn.close()
     token = app.config['secret_key_streaming']
     return render_template('stream.html', token=token)
 
@@ -155,25 +115,12 @@ def platform_control():
         return redirect('/login')
 
     action = request.form['action']
-    # session['direction'] = request.form['action']
-    # get action time in seconds, to avoid mutiple requests in 1 second
-    # session['action_time'] = time.strftime("%Y-%m-%d %H:%M:%S")
+    # for debugging
     print(action)
     # store action into status table
-    # conn = sqlite3.connect(db_filename)
-    # c = conn.cursor()
-    # c.execute('UPDATE status_table SET direction = ?, action_time = ? WHERE id = ?',
-    #           (action, action_time, 1))
-    # conn.commit()
-    # conn.close()
     json_helper(control_file, 'w', arg='direction', value=action)
-    json_helper(control_file, 'w', arg='action_time', value=time.strftime("%Y-%m-%d %H:%M:%S"))
-    # with open(status_file, 'r') as f:
-    #     status = json.load(f)
-    # status['direction'] = action
-    # status['action_time'] = action_time
-    # with open(status_file, 'w') as f:
-    #     json.dump(status, f)
+    json_helper(control_file, 'w', arg='action_time',
+                value=time.strftime("%Y-%m-%d %H:%M:%S"))
 
     return Response(response=json.dumps({'status': session['direction']}), status=200, mimetype="application/json")
 
@@ -194,10 +141,6 @@ def login():
 
     if login_success:
         session['username'] = username
-        # new_token = secrets.token_hex(16)
-        # cursor = c.execute(
-        #     'UPDATE users SET token = ? WHERE username = ?', (new_token, username))
-        # conn.commit()
 
     conn.close()
 
@@ -206,12 +149,6 @@ def login():
 
 @app.route('/api/logout')
 def logout():
-    # conn = sqlite3.connect(db_filename)
-    # c = conn.cursor()
-    # c.execute('UPDATE users SET token = ? WHERE username = ?',
-    #           ('', session['username']))
-    # conn.commit()
-    # conn.close()
     session['username'] = None
 
     return Response(response=json.dumps({'status': True}), status=200, mimetype="application/json")
@@ -294,8 +231,9 @@ def upload_image():
                 return Response(response=json.dumps({'success': True}), status=200, mimetype="application/json")
             else:
                 # delete the saved file
-                os.remove(os.path.join(app.config['face_upload_folder'], filename))
-                return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json") 
+                os.remove(os.path.join(
+                    app.config['face_upload_folder'], filename))
+                return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json")
 
     # fail to upload image
     return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json")
@@ -312,7 +250,6 @@ def delete_image():
     filename = session['username']
     faces_list = [f for f in os.listdir(face_upload_folder)]
     face_list_without_ext = [os.path.splitext(f)[0] for f in faces_list]
-    # encoding_list = [os.path.splitext(f)[0] for f in os.listdir(face_encoding_folder)]
 
     if filename in face_list_without_ext:
         index = face_list_without_ext.index(filename)
@@ -331,18 +268,10 @@ def out_house():
         print('fail to login!')
         return redirect('/login')
     try:
-        # conn = sqlite3.connect(db_filename)
-        # c = conn.cursor()
-        # c.execute('UPDATE status_table SET owner_in_house = ? WHERE id = ?',
-        #           (0, 1))
-        # conn.commit()
-        # conn.close()
         json_helper(status_file, 'w', 'owner_in_house', False)
         return Response(response=json.dumps({'success': True}), status=200, mimetype="application/json")
     except Exception as e:
         return Response(response=json.dumps({'success': False}), status=200, mimetype="application/json")
-
-    
 
 
 # handle the in house status
@@ -354,12 +283,6 @@ def in_house():
         return redirect('/login')
 
     try:
-        # conn = sqlite3.connect(db_filename)
-        # c = conn.cursor()
-        # c.execute('UPDATE status_table SET owner_in_house = ? WHERE id = ?',
-        #           (1, 1))
-        # conn.commit()
-        # conn.close()
         json_helper(status_file, 'w', 'owner_in_house', True)
         json_helper(status_file, 'w', 'stranger_flag', False)
         return Response(response=json.dumps({'success': True}), status=200, mimetype="application/json")
