@@ -9,7 +9,9 @@ import face_recognition
 import numpy as np
 from imutils import paths
 from skimage.measure import compare_ssim
+
 import cv2
+import email_helper
 
 # read the config file
 cfg = ConfigParser()
@@ -20,7 +22,10 @@ frame_tmp = cfg.get('person_recognition', 'recognition_tmp')
 face_encoding_folder = cfg.get(
     'person_recognition', 'face_encoding_folder')
 status_file = cfg.get('person_recognition', 'status_file')
-
+counter_max = int(cfg.get('person_recognition', 'counter'))
+email_interval = int(cfg.get('person_recognition', 'email_interval'))
+counter = 0
+last_email_time = 0
 
 # identify faces in the frame
 def identify_face(input_frame, known_faces, names):
@@ -94,6 +99,7 @@ def json_helper(file, mode='r', arg='', value=''):
 
 # handle recognition results
 def recognition_handler(result, names, status_file):
+    global counter, last_email_time
     # if a face is detected
     if result:
         # get if a owner in frame
@@ -111,8 +117,17 @@ def recognition_handler(result, names, status_file):
             # conn.commit()
             # conn.close()
         else:
-            print('stranger!')
-            json_helper(status_file, 'w', arg='stranger_flag', value=True)
+            if counter == counter_max:
+                # for debugging
+                print('stranger!')
+                json_helper(status_file, 'w', arg='stranger_flag', value=True)
+                current_time = time.time()
+                if (current_time - last_email_time > 60 * email_interval):
+                    email_helper.email_sender()
+                    last_email_time = current_time
+                counter = 0
+            else:
+                counter += 1
             # conn = sqlite3.connect(db_filename)
             # c = conn.cursor()
             # c.execute('UPDATE status_table SET stranger_flag = ? WHERE id = ?', (1, 1))
@@ -133,13 +148,14 @@ def main():
     # arrive_tmp = []
     # frame_count = 0
 
-    print(time.time())
+    # print(time.time())
+    # counter, to eliminate the error detecting
 
     # clear cache
-    # all_frames = sorted(os.listdir(frame_tmp))
-    # for frame in all_frames:
-    #     os.remove(os.path.join(frame_tmp, frame))
-    # time.sleep(2)
+    all_frames = sorted(os.listdir(frame_tmp))
+    for frame in all_frames:
+        os.remove(os.path.join(frame_tmp, frame))
+    time.sleep(2)
 
     # wait for the first receive frame
     all_frames = sorted(os.listdir(frame_tmp))
