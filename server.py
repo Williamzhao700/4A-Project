@@ -223,8 +223,9 @@ def upload_image():
             # encode the image and save the encoding result
             user_image = face_recognition.load_image_file(
                 os.path.join(app.config['face_upload_folder'], filename))
-            user_encoding = face_recognition.face_encodings(user_image)[0]
-            if user_encoding.size != 0:
+            user_encoding = face_recognition.face_encodings(user_image)
+            if user_encoding:
+                user_encoding = user_encoding[0]
                 np.savetxt(os.path.join(face_encoding_folder, filename.rsplit(
                     '.', 1)[0]) + '.txt', user_encoding, delimiter=',')
                 # successfully upload the image

@@ -17,6 +17,8 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <a class="navbar-brand" href="/home">Camera Stream</a>
+        <a class="navbar-brand" href="#" id="in_house">I'm in house!</a>
+        <a class="navbar-brand" href="#" id="out_house">I'm out of my house!</a>
         <a class="navbar-brand" href="#" id="logout_button">Logout</a>
         <a href="#" data-toggle="modal" data-target="#myProfileDialog">
             <span class="glyphicon glyphicon-user"></span> 管理个人信息</a>
@@ -126,6 +128,36 @@
                     alert('Delete unsuccess!')
                 }
             })
+        });
+        // in house
+        $('#in_house').click(function () {
+            var action = $(this).data('action');
+            $.post('/api/in_house', {}, function (data) {
+                if (data.success === true) {
+                    alert('I\'m back!')
+                }
+                else {
+                    alert('Error!')
+                }
+                // you can get data.status
+            }).fail(function () {
+                alert('Opps, failed!');
+            });
+        });
+        // out of house
+        $('#out_house').click(function () {
+            var action = $(this).data('action');
+            $.post('/api/out_house', {}, function (data) {
+                if (data.success === true) {
+                    alert('I\'m out')
+                }
+                else {
+                    alert('Error!')
+                }
+                // you can get data.status
+            }).fail(function () {
+                alert('Opps, failed!');
+            });
         });
     </script>
 </body>
