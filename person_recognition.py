@@ -107,13 +107,14 @@ def recognition_handler(result, names, status_file):
         # print(names)
         # data_head = time.strftime("%Y-%m-%d %H:%M:%S")
         if owner_list:
-            print('detect owner!')
+            # print('detect owner!')
+            counter = 0
             json_helper(status_file, 'w', arg='owner_in_house', value=True)
             json_helper(status_file, 'w', arg='stranger_flag', value=False)
         else:
             if counter == counter_max:
                 # for debugging
-                print('stranger!')
+                # print('stranger!')
                 json_helper(status_file, 'w', arg='stranger_flag', value=True)
                 current_time = time.time()
                 if (current_time - last_email_time > 60 * email_interval):
@@ -122,6 +123,15 @@ def recognition_handler(result, names, status_file):
                 counter = 0
             else:
                 counter += 1
+    else:
+        if counter:
+            # print('stranger!')
+            json_helper(status_file, 'w', arg='stranger_flag', value=True)
+            current_time = time.time()
+            if (current_time - last_email_time > 60 * email_interval):
+                email_helper.email_sender()
+                last_email_time = current_time
+            counter = 0
 
 
 def main():
